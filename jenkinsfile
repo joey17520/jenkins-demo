@@ -1,73 +1,26 @@
 pipeline {
     agent any
     
-    environment {
-        DOCKER_HUB = credentials('docker-hub-credentials') // 如果有需要推送到Docker Hub
-        IMAGE_NAME = 'my-go-app'
-        VERSION = "${env.BUILD_ID}"
-    }
-    
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/joey17520/jenkins-demo.git'
+                git branch: 'main', url: 'https://github.com/your-username/your-go-repo.git'
             }
         }
         
-        stage('Build Go Application') {
+        stage('Build with Docker Compose') {
             steps {
-                script {
-                    // 使用Docker构建Go应用
-                    docker.build("${IMAGE_NAME}-builder", "--target builder .")
-                }
-            }
-        }
-        
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    // 构建生产镜像
-                    docker.build("${IMAGE_NAME}:${VERSION}")
-                }
-            }
-        }
-        
-        stage('Deploy') {
-            steps {
-                script {
-                    // 停止并移除旧容器
-                    sh 'docker-compose down || true'
-                    
-                    // 使用新镜像启动服务
-                    sh "IMAGE_NAME=${IMAGE_NAME}:${VERSION} docker-compose up -d"
-                }
-            }
-        }
-        
-        stage('Test') {
-            steps {
-                script {
-                    // 简单的curl测试
-                    sleep(time: 10, unit: "SECONDS") // 等待应用启动
-                    def response = sh(script: 'curl -s http://localhost:8088', returnStdout: true)
-                    if (!response.contains('Hello, this is my Go app')) {
-                        error('Application test failed!')
-                    }
-                }
+                sh 'docker-compose down || true'
+                sh 'docker-compose build --no-cache'
+                sh 'docker-compose up -d'
             }
         }
     }
     
     post {
         always {
-            // 清理工作空间
-            cleanWs()
-        }
-        success {
-            echo 'Deployment successful!'
-        }
-        failure {
-            echo 'Deployment failed!'
+            // 清理未使用的镜像
+            sh 'docker image prune -f'
         }
     }
 }
