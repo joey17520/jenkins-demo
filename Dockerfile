@@ -12,5 +12,4 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/my-go-app .
 EXPOSE 8088
-
 CMD ["./my-go-app"]
